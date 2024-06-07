@@ -17,7 +17,17 @@ const FormSchema = z.object({
 
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
 
+const UpdateInvoice = FormSchema.omit({ id: true, date: true });
+
+const backToInvoiceTable = () => {
+  // Calling revalidatePath to clear the client cache and make a new server request.
+  revalidatePath('/dashboard/invoices');
+  // Calling redirect to redirect the user to the invoice's page.
+  redirect('/dashboard/invoices');
+};
+
 export async function createInvoice(formData: FormData) {
+  console.log(formData)
   const { customerId, amount, status } = CreateInvoice.parse({
     customerId: formData.get('customerId'),
     amount: formData.get('amount'),
@@ -30,7 +40,27 @@ export async function createInvoice(formData: FormData) {
     INSERT INTO invoices (customer_id, amount, status, date)
     VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
   `;
+  backToInvoiceTable();
+}
 
+export async function updateInvoice(id: string, formData: FormData) {
+  const { customerId, amount, status } = UpdateInvoice.parse({
+    customerId: formData.get('customerId'),
+    amount: formData.get('amount'),
+    status: formData.get('status'),
+  });
+
+  const amountInCents = amount * 100;
+
+  await sql`
+    UPDATE invoices
+    SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+    WHERE id = ${id}
+  `;
+  backToInvoiceTable();
+}
+
+export async function deleteInvoice(id: string) {
+  await sql`DELETE FROM invoices WHERE id = ${id}`;
   revalidatePath('/dashboard/invoices');
-  redirect('/dashboard/invoices');
 }
